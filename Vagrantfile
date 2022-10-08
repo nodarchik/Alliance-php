@@ -32,7 +32,7 @@ Vagrant.configure("2") do |config|
 
   # Create a private network, which allows host-only access to the machine
   # using a specific IP.
-   config.vm.network "private_network", ip: "192.168.33.10"
+   config.vm.network "private_network", ip: "192.168.56.10"
 
   # Create a public network, which generally matched to bridged network.
   # Bridged networks make the machine appear as another physical device on
@@ -66,30 +66,38 @@ Vagrant.configure("2") do |config|
    config.vm.provision "shell", inline: <<-SHELL
     echo -e "https://dl-4.alpinelinux.org/alpine/v3.13/main/" | tee -a /etc/apk/repositories &&
     echo -e "https://dl-4.alpinelinux.org/alpine/v3.13/community/" | tee -a /etc/apk/repositories &&
-
+    
     apk update &&
     apk add nginx micro php7 php7-fpm mysql mysql-client php7-pdo php7-pdo_mysql &&
-
+    
     mysql_install_db --user=mysql --datadir=/var/lib/mysql &&
     rc-service mariadb start &&
     mysqladmin -u root password toor &&
-
+    
     mysql -uroot -ptoor -e "
       CREATE USER 'root'@'%' IDENTIFIED BY 'root';
       GRANT ALL PRIVILEGES ON *.* TO 'root'@'%';
       FLUSH PRIVILEGES;
+      CREATE DATABASE alliance;
+      USE alliance;
+      CREATE TABLE users (
+      id int(11) NOT NULL AUTO_INCREMENT,
+      fname varchar(255) NOT NULL,
+      lname varchar(255) NOT NULL,
+      email varchar(255) NOT NULL,
+      PRIMARY KEY (id));
     " &&
-
+    
     cp /vagrant_data/mariadb-server.cnf /etc/my.cnf.d &&
     cp /vagrant_data/nginx.conf /etc/nginx &&
     cp /vagrant_data/php.ini /etc/nginx &&
-
-     rc-service mariadb restart &&
-     rc-update add mariadb default &&
-
+    
+    rc-service mariadb restart &&
+    rc-update add mariadb default &&
+    
     rc-service nginx restart &&
     rc-update add nginx default &&
-
+    
     rc-service php-fpm7 start &&
     rc-update add php-fpm7 default
   SHELL
